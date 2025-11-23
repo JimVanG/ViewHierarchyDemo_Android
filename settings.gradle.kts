@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "DemoCompLocalsJimVanG"
 include(":app")
- 
+include(":HierarchyModifier")

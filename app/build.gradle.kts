@@ -41,6 +41,9 @@ android {
 
 dependencies {
 
+    // Add the module containing the Modifier.
+    implementation(project(":HierarchyModifier"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
