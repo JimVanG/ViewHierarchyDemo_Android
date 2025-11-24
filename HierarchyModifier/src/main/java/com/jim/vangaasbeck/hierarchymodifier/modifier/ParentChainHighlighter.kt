@@ -26,19 +26,21 @@ import androidx.compose.ui.graphics.Color
  * - Use compositionLocalOf for the property values that are being passed through the hierarchy that
  * change often (i.e. changing the color with each click event).
  * - If the value doesn't change at runtime, we use staticCompositionLocalOf, so that it won't
- * trigger recomposition - typically used when a node ONLY calls a function rather than reading a value.
+ * trigger recomposition - typically used when a node ONLY calls a function rather than reading a value,
+ * or when a value never changes.
  *
  */
 
 /**
- * Use [compositionLocalOf] since this value changes on click.
+ * Use [staticCompositionLocalOf] since the node instance is stable
+ * and remains constant through the life-cycle.
  */
-val LocalHierarchyNode = compositionLocalOf<ComposeNode?> { null }
+val LocalHierarchyNode = staticCompositionLocalOf<ComposeNode?> { null }
 
 /**
- * Use [compositionLocalOf] since this value changes on click.
+ * Use [staticCompositionLocalOf] since the ColourState instance is stable.
  */
-val LocalHighlightState = compositionLocalOf<ColourState> {
+val LocalHighlightState = staticCompositionLocalOf<ColourState> {
     error("ColourState not provided")
 }
 
