@@ -69,7 +69,7 @@ val LocalChildrenRegistry = staticCompositionLocalOf<ChildNodeMap> {
 fun HighlightableNode(
     modifier: Modifier = Modifier,
     parentHighlightColor: Color = Color.Blue, // Blue for parents
-    childHighlightColor: Color = Color.Yellow, // Yellow for children
+    childHighlightColor: Color = Color.Green, // Green for children
     highlightChildren: Boolean = false,
     content: @Composable () -> Unit
 ) {

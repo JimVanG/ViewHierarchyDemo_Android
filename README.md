@@ -4,7 +4,7 @@ Android Compose app demonstrating parent and child node highlighting without pro
 
 ## What It Does
 
-Click any text in the app to highlight all parent nodes (blue) and child nodes (yellow). Uses `CompositionLocal` to avoid passing callbacks through every component.
+Click any text in the app to highlight all parent nodes (blue) and child nodes (green). Uses `CompositionLocal` to avoid passing callbacks through every component.
 
 The Modifier extension method is in its own module to demonstrate it being used in a framework setting.
 
