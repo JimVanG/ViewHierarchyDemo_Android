@@ -1,5 +1,7 @@
 package com.jim.vangaasbeck.democomplocalsjimvang.ui.theme.demo
 
+import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
@@ -25,6 +28,12 @@ import com.jim.vangaasbeck.hierarchymodifier.modifier.HighlightableHierarchy
 import com.jim.vangaasbeck.hierarchymodifier.modifier.HighlightableNode
 import com.jim.vangaasbeck.hierarchymodifier.modifier.LocalHighlightTextColor
 import com.jim.vangaasbeck.hierarchymodifier.modifier.parentChainHighlighter
+
+enum class EventType(val eventValue: String) {
+    SHOW_TOAST("show_toast"),
+    SNACKBAR("show_snackBar"),
+    OTHER("other_event")
+}
 
 /**
  * Helper composable that applies highlight color to text, without prop-drilling.
@@ -53,6 +62,8 @@ private fun HighlightableText(
 
 @Composable
 fun DemoHierarchyScreen() {
+    val context = LocalContext.current
+
     HighlightableHierarchy {
         // Root
         HighlightableNode(
@@ -77,9 +88,9 @@ fun DemoHierarchyScreen() {
                     )
                 ) {
                     HighlightableText(
-                        "Hierarchy Highlighting Without Prop-Drilling Demo",
+                        "Hierarchy Demo Without Prop-Drilling or Event-Drilling",
                         modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -92,7 +103,7 @@ fun DemoHierarchyScreen() {
                     )
                 ) {
                     HighlightableText(
-                        "Click any text below. Parents turn Blue. Children turn Green.",
+                        "Click any text below. Parents turn Blue. Children turn Green. Clicking \"Great-grandchild\" will trigger an event handled in \"Parent B\".",
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.titleMedium
                     )
@@ -175,7 +186,51 @@ fun DemoHierarchyScreen() {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(start = 16.dp),
-                                highlightChildren = true
+                                highlightChildren = true,
+                                onEvent = { event ->
+
+                                    Log.i(
+                                        "DemoHierarchy.HighlightableNode",
+                                        "Event sent from child node: (${event.source.take(8)})," +
+                                                " with data payload (${event.data})."
+                                    )
+
+                                    when (event.eventType) {
+                                        EventType.SHOW_TOAST.eventValue -> {
+                                            // Show Toast
+                                            Toast.makeText(
+                                                context,
+                                                "Handling event in (Parent B) triggered from (${event.data?.toString()}) node.",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+
+                                            return@HighlightableNode true
+                                        }
+
+                                        EventType.SNACKBAR.eventValue -> {
+                                            // Show SnackBar
+
+                                            return@HighlightableNode true
+                                        }
+
+                                        EventType.OTHER.eventValue -> {
+                                            // Do something else...
+
+                                            return@HighlightableNode true
+                                        }
+
+                                        else -> {
+                                            Log.e(
+                                                "DemoHierarchy.HighlightableNode",
+                                                "Unknown event type (${event.eventType})," +
+                                                        " from event source (${event.source})." +
+                                                        " with data payload (${event.data}"
+                                            )
+                                        }
+                                    }
+
+                                    return@HighlightableNode false
+                                }
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     HighlightableText(
@@ -238,7 +293,9 @@ fun DemoHierarchyScreen() {
                                                     HighlightableText(
                                                         "Great-grandchild",
                                                         modifier = Modifier.parentChainHighlighter(
-                                                            highlightChildren = true
+                                                            highlightChildren = true,
+                                                            eventType = EventType.SHOW_TOAST.eventValue,
+                                                            eventData = "Great-grandchild"
                                                         ),
                                                         fontSize = 14.sp
                                                     )
@@ -260,9 +317,8 @@ fun DemoHierarchyScreen() {
                     )
                 ) {
                     HighlightableText(
-                        "CompositionLocals are used to supply the necessary properties throughout the " +
-                                "view hierarchy without prop-drilling. Can also be used to pass event callbacks " +
-                                "without event-drilling.",
+                        "CompositionLocals are used to supply properties/events throughout the " +
+                                "view hierarchy without prop-drilling or event-drilling.",
                         modifier = Modifier
                             .parentChainHighlighter(highlightChildren = true)
                             .padding(12.dp),
