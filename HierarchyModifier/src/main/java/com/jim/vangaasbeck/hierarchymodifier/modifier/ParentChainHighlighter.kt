@@ -6,8 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
@@ -18,32 +20,46 @@ import androidx.compose.ui.graphics.Color
  * view hierarchy without prop-drilling. Can also be used to pass event callbacks
  * without event-drilling.
  *
- * Use compositionLocalOf since all the property values being passed through the hierarchy
- * change often (with each click event). If the value didn't change at runtime, we would use staticCompositionLocalOf,
- * so that it wouldn't trigger recomposition, but this value changes with every click, so use compositionLocalOf.
+ * Use compositionLocalOf for the property values that are being passed through the hierarchy that
+ * change often (like with each click event). If the value doesn't change at runtime, we use staticCompositionLocalOf,
+ * so that it won't trigger recomposition.
+ *
  */
 
+/**
+ * Use [compositionLocalOf] since this value changes on click.
+ */
 val LocalHierarchyNode = compositionLocalOf<ComposeNode?> { null }
 
-// CompositionLocal for the highlight state.
-val LocalHighlightState = compositionLocalOf<ColourState> {
+/**
+ * Use [compositionLocalOf] since this value changes on click.
+ */val LocalHighlightState = compositionLocalOf<ColourState> {
     error("ColourState not provided")
 }
 
-// CompositionLocal for the highlight text color.
-val LocalHighlightTextColor = compositionLocalOf { Color.Unspecified }
+/**
+ * Use [staticCompositionLocalOf] for the map of child nodes because
+ * the value never changes so there's not need to trigger recomposition.
+ */
+val LocalChildrenRegistry = staticCompositionLocalOf<ChildNodeMap> {
+    error("ChildNodeMap not provided")
+}
 
 /**
- * Composable wrapper that allows nodes to pass properties up to parent views in the hierarchy,
+ * Use [compositionLocalOf] since this value changes on click.
+ */val LocalHighlightTextColor = compositionLocalOf { Color.Unspecified }
+
+/**
+ * Composable wrapper that allows nodes to pass properties throughout the view hierarchy,
  * highlighting the content.
  *
  * Usage:
  * ```
  * HighlightableNode(
  *     modifier = Modifier.padding(8.dp),
- *     parentHighlightColor: Color = Color(0x..),
- *     childHighlightColor: Color = Color(0x..),
- *     highlightChildren = true // planning for supporting highlighting children
+ *     parentHighlightColor: Color
+ *     childHighlightColor: Color
+ *     highlightChildren = true
  * ) {
  *     Text("Click me", modifier = Modifier.highlightableClick())
  * }
@@ -52,19 +68,24 @@ val LocalHighlightTextColor = compositionLocalOf { Color.Unspecified }
 @Composable
 fun HighlightableNode(
     modifier: Modifier = Modifier,
-    parentHighlightColor: Color = Color(red = 81, green = 57, blue = 235), // Blue for parents
-    childHighlightColor: Color = Color(red = 213, green = 248, blue = 89), // Yellow for children
+    parentHighlightColor: Color = Color.Blue, // Blue for parents
+    childHighlightColor: Color = Color.Yellow, // Yellow for children
     highlightChildren: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val currentNode = LocalHierarchyNode.current
     val highlightState = LocalHighlightState.current
+    val childrenRegistry = LocalChildrenRegistry.current
 
     // Create a new node for this composable
     val node = remember(currentNode) {
         ComposeNode(parent = currentNode)
     }
 
+    // Register this node with its parent
+    LaunchedEffect(node.id, currentNode?.id) {
+        childrenRegistry.registerChild(currentNode?.id, node.id)
+    }
 
     // Determine text color based on highlight state
     val textColor = when {
@@ -75,6 +96,15 @@ fun HighlightableNode(
                 "Node (${node.id.take(8)}) - PARENT highlighted"
             )
             parentHighlightColor
+        }
+
+        highlightChildren && highlightState.highlightedChildren.contains(node.id) -> {
+            // Just log the first 8 chars of the UUID so the logs aren't too long.
+            Log.d(
+                "ParentChainHighlighter.HighlightableNode",
+                "Node (${node.id.take(8)}) - CHILD highlighted"
+            )
+            childHighlightColor
         }
 
         else -> Color.Unspecified
@@ -99,9 +129,6 @@ fun HighlightableNode(
  * Must be used inside a HighlightableNode wrapper. Reads the current node from
  * CompositionLocal and triggers highlighting on click.
  *
- * Note: Uses `composed` to access CompositionLocal values (required for reading
- * LocalHierarchyNode, LocalHighlightState).
- *
  * Usage:
  * ```
  * HighlightableNode {
@@ -110,9 +137,12 @@ fun HighlightableNode(
  * ```
  */
 @SuppressLint("UnnecessaryComposedModifier")
-fun Modifier.parentChainHighlighter(highlightChildren: Boolean = false): Modifier = composed {
+fun Modifier.parentChainHighlighter(
+    highlightChildren: Boolean = false
+): Modifier = composed {
     val currentNode = LocalHierarchyNode.current
     val highlightState = LocalHighlightState.current
+    val childrenRegistry = LocalChildrenRegistry.current
 
     this.clickable {
         if (currentNode != null) {
@@ -121,21 +151,30 @@ fun Modifier.parentChainHighlighter(highlightChildren: Boolean = false): Modifie
                 highlightState.clearHighlights()
             } else {
                 val parentChain = currentNode.getParentChain()
-                highlightState.highlightChain(parentChain)
+                val children = if (highlightChildren) {
+                    childrenRegistry.getDescendants(currentNode.id)
+                } else {
+                    emptyList()
+                }
+                highlightState.highlightChain(parentChain, children)
             }
         }
     }
 }
 
-// Root wrapper
+/**
+ * Root Wrapper for supporting highlighting the view hierarchy.
+ */
 @Composable
 fun HighlightableHierarchy(
     content: @Composable () -> Unit
 ) {
     val colourState = remember { ColourState() }
+    val childNodeMap = remember { ChildNodeMap() }
 
     CompositionLocalProvider(
         LocalHighlightState provides colourState,
+        LocalChildrenRegistry provides childNodeMap,
         LocalHierarchyNode provides null
     ) {
         content()

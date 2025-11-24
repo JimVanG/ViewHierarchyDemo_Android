@@ -92,7 +92,7 @@ fun DemoHierarchyScreen() {
                     )
                 ) {
                     HighlightableText(
-                        "Click any text below. Parents turn Blue",
+                        "Click any text below. Parents turn Blue. Children turn Yellow.",
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.titleMedium
                     )
